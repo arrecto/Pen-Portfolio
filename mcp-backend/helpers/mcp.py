@@ -1,5 +1,6 @@
 from typing import Optional
 from contextlib import AsyncExitStack
+import asyncio
 import base64
 
 from mcp import ClientSession
@@ -14,23 +15,32 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         self._connected = False
 
-    async def connect(self):
+    async def connect(self, retries: int = 10, delay: float = 3.0):
         if self._connected:
             return
 
         url = f"http://{settings.MCP_HOST}:{settings.MCP_PORT}/mcp"
-        transport = await self.exit_stack.enter_async_context(
-            streamable_http_client(url)
-        )
-        read, write, _ = transport
-        self.session = await self.exit_stack.enter_async_context(
-            ClientSession(read, write)
-        )
-        await self.session.initialize()
-        self._connected = True
+        for attempt in range(1, retries + 1):
+            try:
+                self.exit_stack = AsyncExitStack()
+                transport = await self.exit_stack.enter_async_context(
+                    streamable_http_client(url)
+                )
+                read, write, _ = transport
+                self.session = await self.exit_stack.enter_async_context(
+                    ClientSession(read, write)
+                )
+                await self.session.initialize()
+                self._connected = True
+                response = await self.session.list_tools()
+                print("\nConnected to MCP server with tools:", [t.name for t in response.tools])
+                return
+            except Exception as e:
+                print(f"[MCP] Connection attempt {attempt}/{retries} failed: {e}")
+                if attempt < retries:
+                    await asyncio.sleep(delay)
 
-        response = await self.session.list_tools()
-        print("\nConnected to MCP server with tools:", [t.name for t in response.tools])
+        raise RuntimeError(f"Could not connect to MCP server at {url} after {retries} attempts")
 
     async def list_tools(self) -> list:
         response = await self.session.list_tools()
