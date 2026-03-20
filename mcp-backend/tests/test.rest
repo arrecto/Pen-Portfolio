@@ -1,0 +1,57 @@
+### Embed PDF file
+POST http://localhost:8000/api/v1/client/embed
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="file"; filename="Freelancer-BIR-Registration-2024.pdf"
+Content-Type: application/pdf
+
+< ./Freelancer-BIR-Registration-2024.pdf
+------Boundary--
+
+###
+
+### Chat - Ask about the document
+POST http://localhost:8000/api/v1/client/chat
+Content-Type: application/json
+
+{
+  "session_id": "session-001",
+  "query": "What is this document about?"
+}
+
+###
+
+### Chat - Follow-up question (same session)
+POST http://localhost:8000/api/v1/client/chat
+Content-Type: application/json
+
+{
+  "session_id": "session-001",
+  "query": "What are the requirements mentioned in the document?"
+}
+
+###
+
+### Chat - Another follow-up (same session)
+POST http://localhost:8000/api/v1/client/chat
+Content-Type: application/json
+
+{
+  "session_id": "session-001",
+  "query": "Can you summarize the key steps I need to follow?"
+}
+
+###
+
+### Chat - New session (fresh conversation)
+POST http://localhost:8000/api/v1/client/chat
+Content-Type: application/json
+
+{
+  "session_id": "session-002",
+  "query": "What BIR forms are referenced in the document?"
+}
+
+###
+GET http://localhost:8000/api/v1/client/documents

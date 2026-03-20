@@ -1,0 +1,44 @@
+services:
+
+  embeddings:
+    build:
+      context: ./embeddings
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - chroma_data:/app/chroma_db
+
+  backend:
+    build:
+      context: ./mcp-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - embeddings
+    env_file:
+      - ./mcp-backend/.env
+    volumes:
+      - sqlite_data:/data
+    environment:
+      SQLITE_DB_PATH: /data/pen.db
+      MCP_HOST: embeddings
+      MCP_PORT: 8001
+
+  frontend:
+    build:
+      context: ./mcp-frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+
+volumes:
+  chroma_data:
+  sqlite_data:
