@@ -8,6 +8,7 @@ services:
       - "8001:8001"
     volumes:
       - chroma_data:/app/chroma_db
+      - chroma_model_cache:/root/.cache/chroma
 
   backend:
     build:
@@ -40,3 +41,4 @@ services:
 volumes:
   chroma_data:
   sqlite_data:
+  chroma_model_cache:

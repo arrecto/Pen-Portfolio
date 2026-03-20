@@ -26,7 +26,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      await postWithFormData("/client/embed", { file });
+      await postWithFormData("/client/embed", { files: file });
       router.push("/chat");
     } finally {
       setLoading(false);

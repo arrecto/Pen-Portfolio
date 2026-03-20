@@ -9,6 +9,9 @@ wheels/
 # Virtual environments
 .venv
 
+# ChromaDB
+chroma_db/
+
 # Node.js
 node_modules/
 .pnp
