@@ -3,6 +3,7 @@ from contextlib import AsyncExitStack
 import asyncio
 import base64
 
+import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
@@ -15,32 +16,39 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         self._connected = False
 
-    async def connect(self, retries: int = 10, delay: float = 3.0):
+    async def _wait_for_embeddings(self, url: str, retries: int = 10, delay: float = 3.0):
+        """Poll embeddings HTTP endpoint until it responds."""
+        async with httpx.AsyncClient() as client:
+            for attempt in range(1, retries + 1):
+                try:
+                    await client.get(url, timeout=3.0)
+                    print(f"[MCP] Embeddings service is ready.")
+                    return
+                except Exception as e:
+                    print(f"[MCP] Waiting for embeddings ({attempt}/{retries}): {e}")
+                    if attempt < retries:
+                        await asyncio.sleep(delay)
+        raise RuntimeError(f"Embeddings service at {url} did not become ready after {retries} attempts")
+
+    async def connect(self):
         if self._connected:
             return
 
         url = f"http://{settings.MCP_HOST}:{settings.MCP_PORT}/mcp"
-        for attempt in range(1, retries + 1):
-            try:
-                self.exit_stack = AsyncExitStack()
-                transport = await self.exit_stack.enter_async_context(
-                    streamable_http_client(url)
-                )
-                read, write, _ = transport
-                self.session = await self.exit_stack.enter_async_context(
-                    ClientSession(read, write)
-                )
-                await self.session.initialize()
-                self._connected = True
-                response = await self.session.list_tools()
-                print("\nConnected to MCP server with tools:", [t.name for t in response.tools])
-                return
-            except Exception as e:
-                print(f"[MCP] Connection attempt {attempt}/{retries} failed: {e}")
-                if attempt < retries:
-                    await asyncio.sleep(delay)
+        await self._wait_for_embeddings(url)
 
-        raise RuntimeError(f"Could not connect to MCP server at {url} after {retries} attempts")
+        transport = await self.exit_stack.enter_async_context(
+            streamable_http_client(url)
+        )
+        read, write, _ = transport
+        self.session = await self.exit_stack.enter_async_context(
+            ClientSession(read, write)
+        )
+        await self.session.initialize()
+        self._connected = True
+
+        response = await self.session.list_tools()
+        print("\nConnected to MCP server with tools:", [t.name for t in response.tools])
 
     async def list_tools(self) -> list:
         response = await self.session.list_tools()
