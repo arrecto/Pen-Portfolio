@@ -10,7 +10,7 @@ from helpers.file_parser import chunk_file
 
 collection = client.get_or_create_collection("documents")
 
-mcp = FastMCP("embeddings", port=8001)
+mcp = FastMCP("embeddings", port=8001, host="0.0.0.0")
 
 
 @mcp.tool()
@@ -77,7 +77,7 @@ def delete_data():
 
 
 def main():
-    mcp.run(transport="streamable-http", host="0.0.0.0")
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":
