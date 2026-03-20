@@ -17,8 +17,6 @@ services:
       - "8000:8000"
     depends_on:
       - embeddings
-    env_file:
-      - ./mcp-backend/.env
     volumes:
       - sqlite_data:/data
     environment:
