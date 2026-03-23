@@ -6,7 +6,8 @@ import json
 from mcp.server.fastmcp import FastMCP
 
 from helpers.chromadb import client
-from helpers.file_parser import chunk_file
+from helpers.file_parser import chunk_file, splitter
+from helpers.scraper import scrape_domain
 
 collection = client.get_or_create_collection("documents")
 
@@ -62,6 +63,40 @@ def delete_document(doc_id: str) -> str:
         return f"Document '{doc_id}' deleted successfully."
     except Exception as e:
         return f"Error deleting document: {str(e)}"
+
+
+@mcp.tool()
+async def scrape_website(domain: str) -> str:
+    """Scrape common subpages of a website domain and embed the content into the knowledge base."""
+    pages = await scrape_domain(domain)
+    if not pages:
+        return f"No content could be scraped from '{domain}'."
+
+    clean_domain = domain.replace("https://", "").replace("http://", "").rstrip("/")
+    embedded = []
+
+    for page in pages:
+        path = (
+            page["url"]
+            .replace(f"https://{clean_domain}", "")
+            .replace(f"http://{clean_domain}", "")
+        ) or "/"
+        source_name = f"{clean_domain}{path}"
+        doc_id = str(uuid.uuid4())
+
+        chunks = splitter.split_text(page["content"])
+        if not chunks:
+            continue
+
+        ids = [str(uuid.uuid4()) for _ in chunks]
+        metadatas = [{"source": source_name, "doc_id": doc_id} for _ in chunks]
+        collection.add(ids=ids, documents=chunks, metadatas=metadatas)
+        embedded.append(source_name)
+
+    if not embedded:
+        return f"Scraped {len(pages)} page(s) but no embeddable content was found."
+
+    return f"Successfully embedded {len(embedded)} page(s): {', '.join(embedded)}"
 
 
 @mcp.tool()

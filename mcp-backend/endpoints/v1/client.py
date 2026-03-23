@@ -17,6 +17,10 @@ class ChatRequest(BaseModel):
     query: str
 
 
+class ScrapeWebsiteRequest(BaseModel):
+    domain: str
+
+
 @router.post("/client/embed", response_model=SingleResponse)
 async def embed_file(files: list[UploadFile] = File(...)):
     results = []
@@ -53,6 +57,12 @@ async def list_documents():
 @router.delete("/client/document/{doc_id}", response_model=SingleResponse)
 async def delete_document(doc_id: str):
     result = await mcp_client.delete_document(doc_id)
+    return SingleResponse(result=result)
+
+
+@router.post("/client/scrape-website", response_model=SingleResponse)
+async def scrape_website(body: ScrapeWebsiteRequest):
+    result = await mcp_client.scrape_website(body.domain)
     return SingleResponse(result=result)
 
 

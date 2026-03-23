@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { CheckCircle, XCircle, X } from "lucide-react";
+import { CheckCircle, Loader, XCircle, X } from "lucide-react";
 
-type ToastType = "success" | "error";
+type ToastType = "success" | "error" | "loading";
 
 type Toast = {
   id: string;
@@ -12,30 +12,34 @@ type Toast = {
 };
 
 type ToastContextType = {
-  toast: (message: string, type?: ToastType) => void;
+  toast: (message: string, type?: ToastType) => string;
+  dismiss: (id: string) => void;
 };
 
-const ToastContext = createContext<ToastContextType>({ toast: () => {} });
+const ToastContext = createContext<ToastContextType>({ toast: () => "", dismiss: () => {} });
 
 export const useToast = () => useContext(ToastContext);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const toast = useCallback((message: string, type: ToastType = "success") => {
     const id = crypto.randomUUID();
     setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+    if (type !== "loading") {
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 3500);
+    }
+    return id;
   }, []);
 
-  const dismiss = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast, dismiss }}>
       {children}
 
       {/* Toast Container */}
@@ -46,18 +50,24 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             className={`flex items-center gap-3 px-4 py-3 rounded-[16px] shadow-lg min-w-[260px] max-w-[360px] border animate-in fade-in slide-in-from-bottom-4 duration-300 ${
               t.type === "success"
                 ? "bg-surface border-primary-light text-text"
+                : t.type === "loading"
+                ? "bg-surface border-primary-light text-text"
                 : "bg-surface border-red-300 text-text"
             }`}
           >
             {t.type === "success" ? (
               <CheckCircle size={18} className="text-primary shrink-0" />
+            ) : t.type === "loading" ? (
+              <Loader size={18} className="text-primary shrink-0 animate-spin" />
             ) : (
               <XCircle size={18} className="text-red-400 shrink-0" />
             )}
             <span className="flex-1 text-base">{t.message}</span>
-            <button onClick={() => dismiss(t.id)} className="text-text-mid hover:text-text transition shrink-0">
-              <X size={16} />
-            </button>
+            {t.type !== "loading" && (
+              <button onClick={() => dismiss(t.id)} className="text-text-mid hover:text-text transition shrink-0">
+                <X size={16} />
+              </button>
+            )}
           </div>
         ))}
       </div>

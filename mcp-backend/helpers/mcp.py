@@ -72,6 +72,10 @@ class MCPClient:
         result = await self.session.call_tool("delete_document", {"doc_id": doc_id})
         return str(result.content)
 
+    async def scrape_website(self, domain: str) -> str:
+        result = await self.session.call_tool("scrape_website", {"domain": domain})
+        return result.content[0].text if result.content else "No result"
+
     async def delete_data(self) -> str:
         result = await self.session.call_tool("delete_data", {})
         return str(result.content)

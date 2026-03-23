@@ -5,29 +5,38 @@ import { Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { useHttp } from "@/contexts/HttpProvider";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function Home() {
-  const { postWithFormData } = useHttp();
+  const { post, postWithFormData } = useHttp();
+  const { toast, dismiss } = useToast();
   const router = useRouter();
 
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showUrlDialog, setShowUrlDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGetStarted = async () => {
-    if (url.trim()) {
-      setShowUrlDialog(true);
-      return;
-    }
-
-    if (!file) return;
-
     setLoading(true);
+    const domain = url.trim();
+    const loadingId = domain
+      ? toast(`Scraping '${domain}'…`, "loading")
+      : toast("Uploading document…", "loading");
     try {
-      await postWithFormData("/client/embed", { files: file });
+      if (domain) {
+        await post("/client/scrape-website", { domain });
+      } else if (file) {
+        await postWithFormData("/client/embed", { files: file });
+      } else {
+        dismiss(loadingId);
+        return;
+      }
+      dismiss(loadingId);
       router.push("/chat");
+    } catch {
+      dismiss(loadingId);
+      toast("Something went wrong. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -95,23 +104,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* URL Not Supported Dialog */}
-      {showUrlDialog && (
-        <div className="fixed inset-0 flex items-center justify-center bg-text/30 z-50">
-          <div className="bg-surface rounded-[20px] shadow-xl p-8 max-w-sm w-full mx-4 flex flex-col gap-4">
-            <h2 className="font-title text-[28px] font-medium text-text">Not available yet</h2>
-            <p className="text-text-mid">
-              URL embedding is not supported yet. Please upload a PDF document instead.
-            </p>
-            <button
-              onClick={() => setShowUrlDialog(false)}
-              className="h-[48px] w-full font-semibold text-surface bg-primary border border-primary-light rounded-full shadow-md"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
