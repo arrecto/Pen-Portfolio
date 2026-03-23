@@ -16,13 +16,13 @@ RUN pip install uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev
 
+# Pre-download the ONNX embedding model before Playwright to avoid disk pressure
+RUN uv run python -c "from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2; ONNXMiniLM_L6_V2()"
+
 # Install Playwright browser and run crawl4ai setup
 RUN uv run crawl4ai-setup
 
 COPY . .
-
-# Pre-download the ONNX embedding model at build time to avoid runtime OOM spikes
-RUN uv run python -c "from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2; ONNXMiniLM_L6_V2()"
 
 EXPOSE 8001
 
